@@ -160,7 +160,7 @@ def plot_triangle(
 
 
 def generate_triangle(
-    points=[0.5, 0.5, 0.0],
+    points=None,
     border=100,
     label="My Research",
     generate_plot=True,
@@ -192,6 +192,10 @@ def generate_triangle(
         image: (height, width, 3) float array of the rendered triangle.
         points_xy: list of (x, y) pixel coordinates, one per input point.
     """
+
+    if points is None:
+        points = [0.5, 0.5, 0.0]
+
     red_point = np.array([width / 2, border])  # Analytical
     green_point = np.array([border, height - border])  # Data-Driven
     blue_point = np.array([width - border, height - border])  # Physical
