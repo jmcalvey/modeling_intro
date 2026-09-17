@@ -1,27 +1,18 @@
 """
 barycentric_triangle.py
 
-Visualizes one or more points within a barycentric "Analytical / Data-Driven /
+Visualizes a point within a barycentric "Analytical / Data-Driven /
 Physical" (A/D/P) triangle, where each vertex is colored red/green/blue and
 interior pixels are shaded by distance to each vertex.
 
 Library usage:
     from barycentric_triangle import generate_triangle
-
-    # single point
-    generate_triangle(points=[(0.5, 0.3, 0.2)])
-
-    # multiple points, each with its own label
-    generate_triangle(
-        points=[(0.5, 0.3, 0.2), (0.1, 0.8, 0.1)],
-        labels=["Model A", "Model B"],
-    )
+    generate_triangle(point=[(0.5, 0.3, 0.2)])
 
 CLI usage:
     python barycentric_triangle.py
     python barycentric_triangle.py output.png
     python barycentric_triangle.py output.png 0.5 0.3 0.2
-    python barycentric_triangle.py output.png 0.5 0.3 0.2 0.1 0.8 0.1
 """
 
 import argparse
@@ -108,7 +99,7 @@ def _barycentric_to_xy(A, D, P, red_point, green_point, blue_point):
 def plot_triangle(
     image,
     points_xy,
-    labels,
+    label,
     red_point,
     green_point,
     blue_point,
@@ -116,24 +107,23 @@ def plot_triangle(
     show=True,
 ):
     """
-    Render the triangle image with one or more points marked on it, then save
+    Render the triangle image with a point marked on it, then save
     (and optionally show) the plot.
 
     image: (height, width, 3) float array, as returned by generate_triangle.
     points_xy: list of (x, y) pixel coordinates to mark.
-    labels: list of label strings, same length as points_xy.
+    label: label string for the point.
     red_point, green_point, blue_point: pixel coordinates of the Analytical,
-        Data-Driven, and Physical vertices (for corner label placement).
-    output_path: where to save the plot image (parent directory is created
-        automatically if it doesn't exist).
+        Data-Driven, and Physical vertices.
+    output_path: where to save the plot image.
     show: if True, also display the plot with plt.show().
     """
     plt.figure(figsize=(8, 7))
     plt.imshow(image)
 
-    for (x, y), label in zip(points_xy, labels):
-        plt.plot(x, y, marker="o", color="black", markersize=6)
-        plt.text(x + 12, y + 12, label, fontsize=10, color="black")
+    x, y = points_xy[0]
+    plt.plot(x, y, marker="o", color="black", markersize=6)
+    plt.text(x + 12, y + 12, label, fontsize=10, color="black")
 
     plt.text(
         green_point[0] - 20,
@@ -160,7 +150,7 @@ def plot_triangle(
 
 
 def generate_triangle(
-    points=None,
+    point=None,
     border=100,
     label="My Research",
     generate_plot=True,
@@ -169,21 +159,19 @@ def generate_triangle(
     height=HEIGHT,
 ):
     """
-    Build the A/D/P triangle and place one or more points on it at the given
+    Build the A/D/P triangle and place a point on it at the given
     barycentric coordinates. Optionally renders/saves/shows the plot via
     plot_triangle.
 
-    points: list of (A, D, P) tuples, one per point. A, D, P are weights
-        toward the Analytical (red), Data-Driven (green), and Physical
-        (blue) vertices; each triple is normalized automatically, so only
+    point: (A, D, P) tuple, A, D, P are weights toward the
+        Analytical (red), Data-Driven (green), and Physical (blue) 
+        vertices; each triple is normalized automatically, so only
         relative proportions matter. A single (A, D, P) tuple is also
         accepted directly. Defaults to a single centered-ish point.
-    labels: optional list of label strings, one per point. Defaults to
-        "My Research" for a single point, or "Point 1", "Point 2", ...
-        for multiple points.
+    labels: optional label string. Defaults to "My Research".
     border: pixel margin from image edges to the triangle's vertices.
     generate_plot: if True, call plot_triangle to render, save, and show the
-        plot; if False, just compute and return the image + points (useful
+        plot; if False, just compute and return the image + point (useful
         for scripting/tests).
     output_path: where to save the plot image, passed through to
         plot_triangle.
@@ -193,19 +181,15 @@ def generate_triangle(
         points_xy: list of (x, y) pixel coordinates, one per input point.
     """
 
-    if points is None:
-        points = [0.5, 0.5, 0.0]
+    if point is None:
+        point = (0.5, 0.5, 0.0)
 
     red_point = np.array([width / 2, border])  # Analytical
     green_point = np.array([border, height - border])  # Data-Driven
     blue_point = np.array([width - border, height - border])  # Physical
 
     image = _build_triangle_image(red_point, green_point, blue_point, width, height)
-    points_xy = [
-        _barycentric_to_xy(A, D, P, red_point, green_point, blue_point)
-        for A, D, P in points
-    ]
-
+    points_xy = [_barycentric_to_xy(point[0], point[1], point[2], red_point, green_point, blue_point)]
     if generate_plot:
         plot_triangle(
             image,
@@ -223,7 +207,7 @@ def generate_triangle(
 def main():
     parser = argparse.ArgumentParser(
         description=(
-            "Plot one or more points in the Analytical / Data-Driven / "
+            "Plot a point in the Analytical / Data-Driven / "
             "Physical barycentric triangle."
         )
     )
@@ -237,9 +221,7 @@ def main():
         "coords",
         nargs="*",
         type=float,
-        help="One or more points as flat A D P values, e.g. "
-        "'0.5 0.3 0.2' for one point, or "
-        "'0.5 0.3 0.2 0.1 0.8 0.1' for two points",
+        help="A D P values for the point, e.g. '0.5 0.3 0.2'",
     )
     parser.add_argument(
         "--border",
@@ -258,12 +240,12 @@ def main():
             f"Coordinates must be given as complete A D P triples (got {len(args.coords)} values)"
         )
 
-    points = None
+    point = None
     if args.coords:
-        points = [tuple(args.coords[i : i + 3]) for i in range(0, len(args.coords), 3)]
+        point = tuple(args.coords)
 
     generate_triangle(
-        points=points,
+        point=point,
         border=args.border,
         generate_plot=not args.no_plot,
         output_path=args.output,
